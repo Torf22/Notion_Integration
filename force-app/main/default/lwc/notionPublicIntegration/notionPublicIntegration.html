@@ -1,0 +1,13 @@
+<template>
+    <lightning-card title="Notion Public Integration"></lightning-card>
+    <div class="slds-m-around_medium">
+        <lightning-button label="Authorize with Notion" onclick={authorizeWithNotion}></lightning-button>
+        <template if:true={code}>
+            <p>Authorization Code: {code}</p>
+            <lightning-button label="Exchange Code for Token" onclick={exchangeCodeForToken}></lightning-button>
+        </template>
+        <template if:true={accessToken}>
+            <p>Access Token: {accessToken}</p>
+        </template>
+    </div>
+</template>
