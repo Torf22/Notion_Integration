@@ -1,5 +1,0 @@
-<apex:page controller="NotionPublicIntegrationController">
-    <script>
-        window.location.href = 'https://freelance107-dev-ed.develop.lightning.force.com/lightning/n/Notion';
-    </script>
-</apex:page>

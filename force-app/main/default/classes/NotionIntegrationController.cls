@@ -1,59 +1,45 @@
 global with sharing class NotionIntegrationController {
-    @AuraEnabled
-    public static String createDatabase(String dbName) {
-      // Fetch the custom setting values
-      NotionConfig__mdt notionConfig = [
-        SELECT
-          Notion_Key__c,
-          Notion_Page_Id__c
-        FROM NotionConfig__mdt
-        WHERE DeveloperName = 'Test_Noton_Yuriy'
-        LIMIT 1
-      ];
-      if (notionConfig == null) {
-        throw new AuraHandledException('Notion configuration not found');
-      }
-      
-      String notionKey = notionConfig.NOTION_KEY__c;
-      String notionPageId = notionConfig.NOTION_PAGE_ID__c;
-  
-      HttpRequest req = new HttpRequest();
-      Http http = new Http();
-      req.setEndpoint('https://api.notion.com/v1/databases');
-      req.setMethod('POST');
-      req.setHeader('Authorization', 'Bearer ' + notionKey);
-      req.setHeader('Notion-Version', '2022-06-28');
-      req.setHeader('Content-Type', 'application/json');
-  
-      Map<String, Object> payload = new Map<String, Object>();
-      Map<String, Object> parent = new Map<String, Object>();
-      parent.put('type', 'page_id');
-      parent.put('page_id', notionPageId);
-  
-      payload.put('parent', parent);
-      payload.put('title', new List<Map<String, Object>>{
-        new Map<String, Object>{
-          'type' => 'text',
-          'text' => new Map<String, Object>{
-            'content' => dbName
+
+  @AuraEnabled(cacheable=true)
+  public static List<String> getNotionContext() {
+      String httpMethod = 'POST';
+      String httpEndpointData = 'search';
+      HttpResponse response = NotionHttpService.getResponse(httpMethod, httpEndpointData);
+      return getContext(response);
+  }
+
+  public static List<String> getContext(HttpResponse res){
+    List<String> listContext = new List<String>();
+      Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+      List<Object> results = (List<Object>) responseMap.get('results');
+      for (Object result : results) {
+          Map<String, Object> databaseMap = (Map<String, Object>) result;
+          String id = (String) databaseMap.get('id');
+          if (databaseMap.containsKey('properties')) {
+            // System.debug('databaseMap: ' + propertiesMap);
+              Map<String, Object> propertiesMap = (Map<String, Object>) databaseMap.get('properties');
+              System.debug('databaseMap: ' + propertiesMap);
+              if (propertiesMap.containsKey('Title')) {
+                System.debug('propertiesMap: ' + propertiesMap);
+                  Map<String, Object> titleProperty = (Map<String, Object>) propertiesMap.get('Title');
+                  if (titleProperty.containsKey('title')) {
+                    System.debug('titleProperty: ' + titleProperty);
+                      List<Object> titleList = (List<Object>) titleProperty.get('title');
+                      if (!titleList.isEmpty()) {
+                        System.debug('titleList: ' + titleList);
+                        for (Object titleItem : titleList) {
+                          Map<String, Object> titleMap = (Map<String, Object>) titleItem;
+                          if (titleMap.containsKey('plain_text')) {
+                              String plainText = (String) titleMap.get('plain_text');
+                              listContext.add(plainText);
+                              System.debug('plain_text: ' + plainText);
+                          }
+                        }
+                      }
+                  }
+              }
           }
-        }
-      });
-  
-      payload.put('properties', new Map<String, Object>{
-        'Name' => new Map<String, Object>{
-          'title' => new Map<String, Object>()
-        }
-      });
-  
-      req.setBody(JSON.serialize(payload));
-  
-      HttpResponse res = http.send(req);
-  
-      if (res.getStatusCode() == 200) {
-        return 'success';
-      } else {
-        throw new AuraHandledException('Failed to create database: ' + res.getBody());
       }
-    }
+    return listContext;
+  }
 }

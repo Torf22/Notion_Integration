@@ -1,20 +1,26 @@
 import { LightningElement, track } from 'lwc';
-import createDatabase from '@salesforce/apex/NotionIntegrationController.createDatabase';
+import getNotionContext from '@salesforce/apex/NotionIntegrationController.getNotionContext';
 
 export default class DatabaseForm extends LightningElement {
-  @track dbName = '';
-  @track responseMessage = '';
+ 
+    @track context;
+    @track error;
 
-  handleInputChange(event) {
-    this.dbName = event.target.value;
-  }
-
-  async handleSubmit() {
-    try {
-      const response = await createDatabase({ dbName: this.dbName });
-      this.responseMessage = 'Database created successfully!';
-    } catch (error) {
-      this.responseMessage = 'Error creating database: ' + error.body.message;
+    connectedCallback() {
+        this.fetchNotionContext();
     }
-  }
+
+    fetchNotionContext() {
+        getNotionContext()
+            .then(result => {
+                this.context = result;
+                
+                console.log('context ---- ', this.context);
+                this.error = undefined;
+            })
+            .catch(error => {
+                this.error = error;
+                this.context = undefined;
+            });
+    }
 }
